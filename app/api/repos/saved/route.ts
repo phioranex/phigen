@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { hasPro } from "@/lib/admin";
 
 // Add a saved repo
 export async function POST(req: NextRequest) {
@@ -21,7 +22,7 @@ export async function POST(req: NextRequest) {
       select: { plan: true },
     });
 
-    if (user?.plan === "FREE") {
+    if (!hasPro(user?.plan ?? "FREE")) {
       const existingPrivate = await prisma.savedRepo.count({
         where: { userId: session.user.id, isPrivate: true },
       });
@@ -80,7 +81,7 @@ export async function DELETE(req: NextRequest) {
     },
   });
 
-  if (repo?.isPrivate && user?.plan === "FREE") {
+  if (repo?.isPrivate && !hasPro(user?.plan ?? "FREE")) {
     return NextResponse.json(
       { error: "Free plan users cannot remove private repos." },
       { status: 403 }

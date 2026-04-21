@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { fetchCommits } from "@/lib/github";
 import { generateChangelog } from "@/lib/claude";
+import { hasPro } from "@/lib/admin";
 
 export async function POST(req: NextRequest) {
   const session = await auth();
@@ -43,7 +44,7 @@ export async function POST(req: NextRequest) {
 
     // Free plan: check they've saved this private repo (already enforced in SavedRepo)
     // but also verify they haven't already used their 1-private-repo changelog slot
-    if (user?.plan === "FREE") {
+    if (!hasPro(user?.plan ?? "FREE")) {
       const savedPrivate = await prisma.savedRepo.findFirst({
         where: { userId: session.user.id, isPrivate: true, repoOwner, repoName },
       });

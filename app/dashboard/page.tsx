@@ -121,7 +121,11 @@ function Sidebar({
           )}
           <div className="min-w-0">
             <div className="font-semibold text-sm truncate">{user.username}</div>
-            {user.plan === "PRO" ? (
+            {user.plan === "ADMIN" ? (
+              <span className="inline-flex items-center gap-1 text-xs bg-red-900/40 text-red-300 px-2 py-0.5 rounded-full font-medium border border-red-700/40">
+                ⚡ Admin
+              </span>
+            ) : user.plan === "PRO" ? (
               <span className="inline-flex items-center gap-1 text-xs bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded-full font-medium">
                 ✦ Pro
               </span>
@@ -165,6 +169,17 @@ function Sidebar({
           </svg>
           Payments
         </button>
+        {user.plan === "ADMIN" && (
+          <Link
+            href="/admin"
+            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors mt-1 text-red-400 hover:text-red-300 hover:bg-red-900/20"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            </svg>
+            Admin Panel
+          </Link>
+        )}
       </nav>
 
       {/* Repo sections */}
@@ -319,7 +334,7 @@ function PrivateRepoSection({ user, onRepoChange }: { user: UserData; onRepoChan
   const [error, setError] = useState("");
 
   const privateSaved = user.savedRepos.filter((r) => r.isPrivate);
-  const isPro = user.plan === "PRO";
+  const isPro = user.plan === "PRO" || user.plan === "ADMIN";
   const hasPrivateSlot = isPro || privateSaved.length === 0;
 
   async function loadPrivateRepos() {
@@ -660,20 +675,28 @@ function PaymentsContent({ user, onCancel }: { user: UserData; onCancel: () => v
         <div className="flex items-start justify-between">
           <div>
             <h2 className="font-semibold text-lg">
-              {user.plan === "PRO" ? (
+              {user.plan === "ADMIN" ? (
+                <span className="flex items-center gap-2">
+                  <span className="text-red-400">⚡</span> Admin
+                </span>
+              ) : user.plan === "PRO" ? (
                 <span className="flex items-center gap-2">
                   <span className="text-indigo-400">✦</span> Pro Plan
                 </span>
               ) : "Free Plan"}
             </h2>
             <p className="text-gray-400 text-sm mt-1">
-              {user.plan === "PRO"
+              {user.plan === "ADMIN"
+                ? "Full access · All repos · No limits · Admin panel"
+                : user.plan === "PRO"
                 ? "Unlimited private repos · Priority generation · Download exports"
                 : "Unlimited public repos · 1 private repo"}
             </p>
           </div>
           <div className="text-right">
-            {user.plan === "PRO" ? (
+            {user.plan === "ADMIN" ? (
+              <div className="text-2xl font-bold text-red-400">∞</div>
+            ) : user.plan === "PRO" ? (
               <div className="text-2xl font-bold">₹199<span className="text-sm font-normal text-gray-400">/mo</span></div>
             ) : (
               <div className="text-2xl font-bold text-gray-400">$0</div>
@@ -756,7 +779,7 @@ function PaymentsContent({ user, onCancel }: { user: UserData; onCancel: () => v
               "Shareable links",
               "Last 10 changelogs",
             ]}
-            highlighted={user.plan !== "PRO"}
+            highlighted={user.plan === "FREE"}
           />
           <FeatureList
             title="Pro"

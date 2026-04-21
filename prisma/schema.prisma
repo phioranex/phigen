@@ -60,4 +60,5 @@ model Subscription {
 enum Plan {
   FREE
   PRO
+  ADMIN
 }

@@ -1,6 +1,7 @@
 import NextAuth from "next-auth";
 import GitHub from "next-auth/providers/github";
 import { prisma } from "@/lib/prisma";
+import { ADMIN_USERNAME } from "@/lib/admin";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
@@ -22,6 +23,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         avatar_url: string;
       };
 
+      const isAdminUser = githubProfile.login === ADMIN_USERNAME;
+
       await prisma.user.upsert({
         where: { githubId: String(githubProfile.id) },
         update: {
@@ -29,6 +32,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           email: user.email ?? undefined,
           avatarUrl: githubProfile.avatar_url,
           accessToken: account.access_token!,
+          ...(isAdminUser ? { plan: "ADMIN" } : {}),
         },
         create: {
           githubId: String(githubProfile.id),
@@ -36,6 +40,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           email: user.email ?? undefined,
           avatarUrl: githubProfile.avatar_url,
           accessToken: account.access_token!,
+          plan: isAdminUser ? "ADMIN" : "FREE",
         },
       });
 
