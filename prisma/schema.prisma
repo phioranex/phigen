@@ -1,0 +1,51 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String        @id @default(cuid())
+  githubId     String        @unique
+  username     String
+  email        String?
+  avatarUrl    String?
+  accessToken  String
+  plan         Plan          @default(FREE)
+  createdAt    DateTime      @default(now())
+  changelogs   Changelog[]
+  subscription Subscription?
+}
+
+model Changelog {
+  id         String   @id @default(cuid())
+  userId     String?
+  repoName   String
+  repoOwner  String
+  isPrivate  Boolean  @default(false)
+  dateFrom   DateTime
+  dateTo     DateTime
+  content    String
+  shareToken String   @unique @default(cuid())
+  createdAt  DateTime @default(now())
+  user       User?    @relation(fields: [userId], references: [id])
+}
+
+model Subscription {
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  razorpaySubId    String?
+  stripeSubId      String?
+  status           String
+  currentPeriodEnd DateTime
+  createdAt        DateTime @default(now())
+  user             User     @relation(fields: [userId], references: [id])
+}
+
+enum Plan {
+  FREE
+  PRO
+}
