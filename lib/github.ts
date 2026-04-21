@@ -18,6 +18,12 @@ export interface GitHubCommit {
   };
 }
 
+export interface GitHubBranch {
+  name: string;
+  commit: { sha: string };
+  protected: boolean;
+}
+
 export async function fetchUserRepos(accessToken: string): Promise<GitHubRepo[]> {
   const repos: GitHubRepo[] = [];
   let page = 1;
@@ -47,19 +53,62 @@ export async function fetchUserRepos(accessToken: string): Promise<GitHubRepo[]>
   return repos;
 }
 
+export async function fetchBranches(
+  accessToken: string,
+  owner: string,
+  repo: string
+): Promise<GitHubBranch[]> {
+  const branches: GitHubBranch[] = [];
+  let page = 1;
+
+  while (true) {
+    const res = await fetch(
+      `https://api.github.com/repos/${owner}/${repo}/branches?per_page=100&page=${page}`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          Accept: "application/vnd.github+json",
+        },
+      }
+    );
+
+    if (!res.ok) throw new Error(`GitHub API error: ${res.status}`);
+
+    const data: GitHubBranch[] = await res.json();
+    if (data.length === 0) break;
+
+    branches.push(...data);
+    page++;
+
+    if (data.length < 100) break;
+  }
+
+  return branches;
+}
+
 export async function fetchCommits(
   accessToken: string,
   owner: string,
   repo: string,
   since: string,
-  until: string
+  until: string,
+  branch?: string
 ): Promise<GitHubCommit[]> {
   const commits: GitHubCommit[] = [];
   let page = 1;
 
   while (true) {
+    const params = new URLSearchParams({
+      since,
+      until,
+      per_page: "100",
+      page: String(page),
+    });
+
+    if (branch) params.set("sha", branch);
+
     const res = await fetch(
-      `https://api.github.com/repos/${owner}/${repo}/commits?since=${since}&until=${until}&per_page=100&page=${page}`,
+      `https://api.github.com/repos/${owner}/${repo}/commits?${params}`,
       {
         headers: {
           Authorization: `Bearer ${accessToken}`,

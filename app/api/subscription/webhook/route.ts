@@ -1,118 +1,97 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getStripe } from "@/lib/payments";
 import crypto from "crypto";
 
 export async function POST(req: NextRequest) {
   const body = await req.text();
   const signature = req.headers.get("x-razorpay-signature");
-  const stripeSignature = req.headers.get("stripe-signature");
 
-  if (signature) {
-    // Razorpay webhook
-    const expectedSig = crypto
-      .createHmac("sha256", process.env.RAZORPAY_WEBHOOK_SECRET!)
-      .update(body)
-      .digest("hex");
-
-    if (expectedSig !== signature) {
-      return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
-    }
-
-    const event = JSON.parse(body);
-    await handleRazorpayEvent(event);
-    return NextResponse.json({ ok: true });
+  if (!signature) {
+    return NextResponse.json({ error: "Missing signature" }, { status: 400 });
   }
 
-  if (stripeSignature) {
-    // Stripe webhook
-    let event;
-    try {
-      event = getStripe().webhooks.constructEvent(
-        body,
-        stripeSignature,
-        process.env.STRIPE_WEBHOOK_SECRET!
-      );
-    } catch {
-      return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
-    }
+  const expectedSig = crypto
+    .createHmac("sha256", process.env.RAZORPAY_WEBHOOK_SECRET!)
+    .update(body)
+    .digest("hex");
 
-    await handleStripeEvent(event as unknown as StripeSubEvent);
-    return NextResponse.json({ ok: true });
+  if (expectedSig !== signature) {
+    return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
 
-  return NextResponse.json({ error: "Unknown provider" }, { status: 400 });
+  const event = JSON.parse(body);
+  await handleRazorpayEvent(event);
+  return NextResponse.json({ ok: true });
 }
 
-async function handleRazorpayEvent(event: { event: string; payload: { subscription: { entity: { id: string; customer_id: string; status: string; current_end: number } } } }) {
+interface RazorpayWebhookEvent {
+  event: string;
+  payload: {
+    subscription: {
+      entity: {
+        id: string;
+        customer_id: string;
+        status: string;
+        current_end: number;
+      };
+    };
+  };
+}
+
+async function handleRazorpayEvent(event: RazorpayWebhookEvent) {
   const sub = event.payload?.subscription?.entity;
   if (!sub) return;
 
-  if (event.event === "subscription.activated" || event.event === "subscription.charged") {
-    await prisma.user.updateMany({
-      where: { id: sub.customer_id },
-      data: { plan: "PRO" },
-    });
-
+  if (
+    event.event === "subscription.activated" ||
+    event.event === "subscription.charged"
+  ) {
+    // Razorpay sends customer_id — map to our userId via githubId or stored razorpaySubId
+    // Best approach: look up by razorpaySubId (set at create time via separate flow)
+    // For webhook-first activation, match by razorpaySubId
     await prisma.subscription.upsert({
-      where: { userId: sub.customer_id },
+      where: { razorpaySubId: sub.id },
       update: {
-        status: sub.status,
+        status: "active",
         currentPeriodEnd: new Date(sub.current_end * 1000),
-        razorpaySubId: sub.id,
       },
       create: {
+        // Fallback: won't have userId — handled in payment success callback instead
         userId: sub.customer_id,
         razorpaySubId: sub.id,
-        status: sub.status,
+        status: "active",
         currentPeriodEnd: new Date(sub.current_end * 1000),
       },
     });
+
+    // Upgrade user plan
+    const dbSub = await prisma.subscription.findUnique({
+      where: { razorpaySubId: sub.id },
+    });
+    if (dbSub) {
+      await prisma.user.update({
+        where: { id: dbSub.userId },
+        data: { plan: "PRO" },
+      });
+    }
   }
 
-  if (event.event === "subscription.cancelled" || event.event === "subscription.expired") {
-    await prisma.user.updateMany({
-      where: { id: sub.customer_id },
-      data: { plan: "FREE" },
+  if (
+    event.event === "subscription.cancelled" ||
+    event.event === "subscription.expired"
+  ) {
+    const dbSub = await prisma.subscription.findUnique({
+      where: { razorpaySubId: sub.id },
     });
-  }
-}
-
-interface StripeSubEvent {
-  type: string;
-  data: { object: { id: string; customer: string; status: string; current_period_end: number } };
-}
-
-async function handleStripeEvent(event: StripeSubEvent) {
-  const sub = event.data.object;
-
-  if (event.type === "customer.subscription.updated" || event.type === "customer.subscription.created") {
-    const user = await prisma.user.findFirst({
-      where: {},
-    });
-
-    if (!user) return;
-
-    const isActive = sub.status === "active";
-
-    await prisma.subscription.upsert({
-      where: { userId: user.id },
-      update: {
-        status: sub.status,
-        currentPeriodEnd: new Date(sub.current_period_end * 1000),
-        stripeSubId: sub.id,
-      },
-      create: {
-        userId: user.id,
-        stripeSubId: sub.id,
-        status: sub.status,
-        currentPeriodEnd: new Date(sub.current_period_end * 1000),
-      },
-    });
-
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { plan: isActive ? "PRO" : "FREE" },
-    });
+    if (dbSub) {
+      await prisma.subscription.update({
+        where: { razorpaySubId: sub.id },
+        data: { status: event.event === "subscription.expired" ? "expired" : "cancelled" },
+      });
+      await prisma.user.update({
+        where: { id: dbSub.userId },
+        data: { plan: "FREE" },
+      });
+    }
   }
 }

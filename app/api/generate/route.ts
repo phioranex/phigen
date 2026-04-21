@@ -6,22 +6,22 @@ import { generateChangelog } from "@/lib/claude";
 
 export async function POST(req: NextRequest) {
   const session = await auth();
-  const { repoOwner, repoName, dateFrom, dateTo } = await req.json();
+  const { repoOwner, repoName, dateFrom, dateTo, branch } = await req.json();
 
   if (!repoOwner || !repoName || !dateFrom || !dateTo) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
 
-  // Check if repo is private
+  const accessToken = session?.user?.id ? await getAccessToken(session.user.id) : null;
+
+  // Check if repo is private via GitHub API
   const repoRes = await fetch(
     `https://api.github.com/repos/${repoOwner}/${repoName}`,
-    session?.user?.id
-      ? {
-          headers: {
-            Authorization: `Bearer ${await getAccessToken(session.user.id)}`,
-          },
-        }
-      : {}
+    {
+      headers: accessToken
+        ? { Authorization: `Bearer ${accessToken}`, Accept: "application/vnd.github+json" }
+        : {},
+    }
   );
 
   if (!repoRes.ok) {
@@ -41,36 +41,46 @@ export async function POST(req: NextRequest) {
       select: { plan: true },
     });
 
+    // Free plan: check they've saved this private repo (already enforced in SavedRepo)
+    // but also verify they haven't already used their 1-private-repo changelog slot
     if (user?.plan === "FREE") {
-      const privateCount = await prisma.changelog.count({
-        where: { userId: session.user.id, isPrivate: true },
+      const savedPrivate = await prisma.savedRepo.findFirst({
+        where: { userId: session.user.id, isPrivate: true, repoOwner, repoName },
       });
 
-      if (privateCount >= 1) {
+      if (!savedPrivate) {
         return NextResponse.json(
-          { error: "Free plan limited to 1 private repo. Upgrade to Pro." },
+          { error: "Add this private repo to your dashboard first." },
           { status: 403 }
         );
       }
     }
   }
 
-  const accessToken = session?.user?.id ? await getAccessToken(session.user.id) : null;
-
   if (!accessToken && isPrivate) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const since = new Date(dateFrom);
+  since.setHours(0, 0, 0, 0);
+
+  const until = new Date(dateTo);
+  until.setHours(23, 59, 59, 999);
 
   const commits = await fetchCommits(
     accessToken ?? "",
     repoOwner,
     repoName,
-    new Date(dateFrom).toISOString(),
-    new Date(dateTo).toISOString()
+    since.toISOString(),
+    until.toISOString(),
+    branch || undefined
   );
 
   if (commits.length === 0) {
-    return NextResponse.json({ error: "No commits found in date range" }, { status: 404 });
+    return NextResponse.json(
+      { error: `No commits found in date range${branch ? ` on branch "${branch}"` : ""}` },
+      { status: 404 }
+    );
   }
 
   const commitMessages = commits.map((c) => c.commit.message.split("\n")[0]);

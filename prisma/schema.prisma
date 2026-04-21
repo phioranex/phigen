@@ -18,6 +18,19 @@ model User {
   createdAt    DateTime      @default(now())
   changelogs   Changelog[]
   subscription Subscription?
+  savedRepos   SavedRepo[]
+}
+
+model SavedRepo {
+  id        String   @id @default(cuid())
+  userId    String
+  repoName  String
+  repoOwner String
+  isPrivate Boolean  @default(false)
+  addedAt   DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, repoOwner, repoName])
 }
 
 model Changelog {
@@ -37,8 +50,7 @@ model Changelog {
 model Subscription {
   id               String   @id @default(cuid())
   userId           String   @unique
-  razorpaySubId    String?
-  stripeSubId      String?
+  razorpaySubId    String?  @unique
   status           String
   currentPeriodEnd DateTime
   createdAt        DateTime @default(now())

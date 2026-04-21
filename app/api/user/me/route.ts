@@ -18,11 +18,15 @@ export async function GET() {
       plan: true,
       createdAt: true,
       subscription: {
-        select: { status: true, currentPeriodEnd: true },
+        select: { status: true, currentPeriodEnd: true, razorpaySubId: true },
+      },
+      savedRepos: {
+        orderBy: { addedAt: "asc" },
+        select: { id: true, repoName: true, repoOwner: true, isPrivate: true, addedAt: true },
       },
       changelogs: {
         orderBy: { createdAt: "desc" },
-        take: 10,
+        take: 20,
         select: {
           id: true,
           repoName: true,

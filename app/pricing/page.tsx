@@ -6,23 +6,22 @@ import Link from "next/link";
 
 export default function PricingPage() {
   const { data: session } = useSession();
-  const [loading, setLoading] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  async function subscribe(provider: "razorpay" | "stripe") {
+  async function subscribe() {
     if (!session) {
       signIn("github");
       return;
     }
 
-    setLoading(provider);
+    setLoading(true);
     setError("");
 
     try {
       const res = await fetch("/api/subscription/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ provider }),
       });
 
       const data = await res.json();
@@ -32,11 +31,9 @@ export default function PricingPage() {
         return;
       }
 
-      if (provider === "razorpay") {
-        openRazorpay(data.subscriptionId);
-      }
+      openRazorpay(data.subscriptionId);
     } finally {
-      setLoading(null);
+      setLoading(false);
     }
   }
 
@@ -50,7 +47,9 @@ export default function PricingPage() {
         window.location.href = "/dashboard";
       },
     };
-    const rzp = new (window as unknown as { Razorpay: new (opts: typeof options) => { open: () => void } }).Razorpay(options);
+    const rzp = new (window as unknown as {
+      Razorpay: new (opts: typeof options) => { open: () => void };
+    }).Razorpay(options);
     rzp.open();
   }
 
@@ -70,7 +69,7 @@ export default function PricingPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto">
         <PlanCard
           name="Free"
-          price="$0"
+          price="₹0"
           features={[
             "Unlimited public repos",
             "1 private repo",
@@ -85,7 +84,6 @@ export default function PricingPage() {
         <PlanCard
           name="Pro"
           price="₹199/mo"
-          subPrice="or $3/mo"
           features={[
             "Everything in Free",
             "Unlimited private repos",
@@ -94,9 +92,9 @@ export default function PricingPage() {
             "Priority generation",
           ]}
           cta={loading ? "..." : "Upgrade to Pro"}
-          onCta={() => subscribe("razorpay")}
+          onCta={subscribe}
           highlighted={true}
-          loading={!!loading}
+          loading={loading}
         />
       </div>
 
@@ -117,7 +115,6 @@ export default function PricingPage() {
 function PlanCard({
   name,
   price,
-  subPrice,
   features,
   cta,
   onCta,
@@ -126,7 +123,6 @@ function PlanCard({
 }: {
   name: string;
   price: string;
-  subPrice?: string;
   features: string[];
   cta: string;
   onCta: () => void;
@@ -144,7 +140,6 @@ function PlanCard({
       <div>
         <h2 className="text-xl font-bold">{name}</h2>
         <div className="text-3xl font-bold mt-2">{price}</div>
-        {subPrice && <div className="text-sm opacity-70">{subPrice}</div>}
       </div>
 
       <ul className="space-y-2">

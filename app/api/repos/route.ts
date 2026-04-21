@@ -20,10 +20,7 @@ export async function GET() {
 
   const repos = await fetchUserRepos(user.accessToken);
 
-  const filtered =
-    user.plan === "FREE"
-      ? repos.filter((r) => !r.private)
-      : repos;
-
-  return NextResponse.json({ repos: filtered, plan: user.plan });
+  // Return all repos regardless of plan.
+  // Limit enforcement (free = 1 private) is in /api/repos/saved.
+  return NextResponse.json({ repos, plan: user.plan });
 }
