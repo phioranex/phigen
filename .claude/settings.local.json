@@ -1,8 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Read(//Users/rv/WebProject/**)",
-      "Bash(npx create-next-app@latest phigen-app --typescript --tailwind --eslint --app --src-dir=false --import-alias=\"@/*\" --no-git)"
-    ]
-  }
-}
