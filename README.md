@@ -10,7 +10,6 @@ Generate beautiful, shareable changelogs from commit history using Claude AI —
 
 <br />
 
-[![CI](https://img.shields.io/github/actions/workflow/status/yourusername/phigen/ci.yml?branch=main&label=build&style=flat-square&logo=github)](https://github.com/yourusername/phigen/actions)
 [![Health](https://img.shields.io/website?url=https%3A%2F%2Fphigen.app&label=health&style=flat-square&logo=statuspage)](https://phigen.app)
 [![Next.js](https://img.shields.io/badge/Next.js-16-black?style=flat-square&logo=next.js)](https://nextjs.org)
 [![Prisma](https://img.shields.io/badge/Prisma-5-2D3748?style=flat-square&logo=prisma)](https://prisma.io)

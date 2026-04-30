@@ -1,0 +1,12 @@
+install:
+  - npm ci
+
+build:
+  - npx prisma generate
+  - npm run build
+  - npx prisma migrate deploy || true
+
+deploy:
+  web:
+    command: npm start
+    port: 3000
