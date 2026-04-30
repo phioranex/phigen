@@ -8,5 +8,5 @@ build:
 
 deploy:
   web:
-    command: node server.js
+    command: npm start
     port: 3000
