@@ -18,7 +18,7 @@ export async function GET() {
       plan: true,
       createdAt: true,
       subscription: {
-        select: { status: true, currentPeriodEnd: true, razorpaySubId: true },
+        select: { status: true, currentPeriodEnd: true },
       },
       savedRepos: {
         orderBy: { addedAt: "asc" },

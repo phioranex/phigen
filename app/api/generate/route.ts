@@ -7,13 +7,17 @@ import { hasPro } from "@/lib/admin";
 
 export async function POST(req: NextRequest) {
   const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Login required to generate changelogs" }, { status: 401 });
+  }
+
   const { repoOwner, repoName, dateFrom, dateTo, branch } = await req.json();
 
   if (!repoOwner || !repoName || !dateFrom || !dateTo) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
 
-  const accessToken = session?.user?.id ? await getAccessToken(session.user.id) : null;
+  const accessToken = await getAccessToken(session.user.id);
 
   // Check if repo is private via GitHub API
   const repoRes = await fetch(

@@ -10,12 +10,24 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Missing signature" }, { status: 400 });
   }
 
+  const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
+  if (!webhookSecret) {
+    return NextResponse.json({ error: "Webhook not configured" }, { status: 500 });
+  }
+
   const expectedSig = crypto
-    .createHmac("sha256", process.env.RAZORPAY_WEBHOOK_SECRET!)
+    .createHmac("sha256", webhookSecret)
     .update(body)
     .digest("hex");
 
-  if (expectedSig !== signature) {
+  // Timing-safe comparison — prevents brute-force via response timing
+  const expectedBuf = Buffer.from(expectedSig, "hex");
+  const actualBuf = Buffer.from(signature, "hex");
+  const sigValid =
+    expectedBuf.length === actualBuf.length &&
+    crypto.timingSafeEqual(expectedBuf, actualBuf);
+
+  if (!sigValid) {
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
 

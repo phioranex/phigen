@@ -37,7 +37,19 @@ export async function GET(req: NextRequest) {
 
   // ── Users ───────────────────────────────────────────────────────────────────
   if (resource === "users") {
-    const users = await prisma.user.findMany({ orderBy: { createdAt: "asc" } });
+    const users = await prisma.user.findMany({
+      orderBy: { createdAt: "asc" },
+      // accessToken excluded — contains live GitHub OAuth tokens
+      select: {
+        id: true,
+        githubId: true,
+        username: true,
+        email: true,
+        avatarUrl: true,
+        plan: true,
+        createdAt: true,
+      },
+    });
     return NextResponse.json({ data: users, count: users.length });
   }
 

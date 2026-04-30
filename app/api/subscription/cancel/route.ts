@@ -27,6 +27,12 @@ export async function POST() {
       data: { status: "cancelled" },
     });
 
+    // Downgrade immediately — don't rely solely on webhook firing
+    await prisma.user.update({
+      where: { id: session.user.id },
+      data: { plan: "FREE" },
+    });
+
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("Cancel error:", err);

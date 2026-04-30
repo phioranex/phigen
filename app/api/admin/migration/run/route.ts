@@ -17,6 +17,22 @@ export async function POST(req: NextRequest) {
     step: Step;
   };
 
+  // Validate URL — must be http/https, no internal IPs
+  let parsedUrl: URL;
+  try {
+    parsedUrl = new URL(oldServerUrl);
+  } catch {
+    return NextResponse.json({ error: "Invalid URL" }, { status: 400 });
+  }
+  if (!["http:", "https:"].includes(parsedUrl.protocol)) {
+    return NextResponse.json({ error: "URL must use http or https" }, { status: 400 });
+  }
+  // Block internal/loopback addresses
+  const blocked = /^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.|::1|fd[0-9a-f]{2}:)/i;
+  if (blocked.test(parsedUrl.hostname)) {
+    return NextResponse.json({ error: "Internal addresses not allowed" }, { status: 400 });
+  }
+
   const base = oldServerUrl.replace(/\/$/, "");
 
   function exportUrl(resource: string, extra = "") {
@@ -51,8 +67,8 @@ export async function POST(req: NextRequest) {
             username: u.username,
             email: u.email,
             avatarUrl: u.avatarUrl,
-            accessToken: u.accessToken,
             plan: u.plan,
+            // accessToken not migrated — users re-auth on new server to get fresh token
           },
           create: {
             id: u.id,
@@ -60,7 +76,7 @@ export async function POST(req: NextRequest) {
             username: u.username,
             email: u.email,
             avatarUrl: u.avatarUrl,
-            accessToken: u.accessToken,
+            accessToken: "", // fresh token issued on next login
             plan: u.plan,
             createdAt: new Date(u.createdAt),
           },

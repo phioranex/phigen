@@ -241,7 +241,6 @@ function PublicReposSection({ user, onRepoChange }: { user: UserData; onRepoChan
       body: JSON.stringify({
         repoOwner: repo.full_name.split("/")[0],
         repoName: repo.name,
-        isPrivate: false,
       }),
     });
     onRepoChange();
@@ -368,7 +367,6 @@ function PrivateRepoSection({ user, onRepoChange }: { user: UserData; onRepoChan
       body: JSON.stringify({
         repoOwner: repo.full_name.split("/")[0],
         repoName: repo.name,
-        isPrivate: true,
       }),
     });
     if (!res.ok) {
