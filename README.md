@@ -10,7 +10,7 @@ Generate beautiful, shareable changelogs from commit history using Claude AI —
 
 <br />
 
-[![Health](https://img.shields.io/website?url=https%3A%2F%2Fphigen.app&label=health&style=flat-square&logo=statuspage)](https://phigen.app)
+[![Health](https://img.shields.io/website?url=https%3A%2F%2Fphigen-main-9a45e2b.kuberns.cloud&label=health&style=flat-square&logo=statuspage)](https://phigen-main-9a45e2b.kuberns.cloud)
 [![Next.js](https://img.shields.io/badge/Next.js-16-black?style=flat-square&logo=next.js)](https://nextjs.org)
 [![Prisma](https://img.shields.io/badge/Prisma-5-2D3748?style=flat-square&logo=prisma)](https://prisma.io)
 [![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
