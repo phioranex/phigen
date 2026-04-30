@@ -8,5 +8,5 @@ build:
 
 deploy:
   web:
-    command: npm start
+    command: HOSTNAME=0.0.0.0 node .next/standalone/server.js
     port: 3000
